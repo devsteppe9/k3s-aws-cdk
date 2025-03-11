@@ -1,6 +1,8 @@
 import os
 from constructs import Construct
 from aws_cdk import (
+    CfnCreationPolicy,
+    CfnResourceSignal,
     Duration,
     Stack,
     aws_iam as iam,
@@ -63,8 +65,13 @@ class K3sStack(Stack):
                 removal_policy=RemovalPolicy.DESTROY
             )
         
+        instance_name = vars.common_prefix + "-master-instance-" + vars.environment
         user_data = ec2.UserData.for_linux()
-        user_data.add_commands(self.get_rendered_script())
+        user_data.add_commands(
+            self.get_rendered_script(),
+            "/opt/aws/bin/cfn-signal --success=true --stack " + self.stack_name + " --resource " + instance_name + " --region " + self.region
+        )
+
 
         ec2_instance_role = iam.Role(
             self, vars.common_prefix + "-master-role-" + vars.environment,
@@ -82,7 +89,7 @@ class K3sStack(Stack):
 
         # create instance
         instance = ec2.Instance(
-            self, vars.common_prefix + "-master-instance-" + vars.environment,
+            self, instance_name,
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
             machine_image=ec2.MachineImage.latest_amazon_linux2023(),
@@ -118,7 +125,7 @@ class K3sStack(Stack):
             variable_start_string='{{',
             variable_end_string='}}'
         )
-
+        
         variables = {
             "k3s_version": self.vars.k3s_version,
             "k3s_token": self.vars.k3s_token,
@@ -135,7 +142,7 @@ class K3sStack(Stack):
             "certmanager_release": self.vars.certmanager_release,
             "certmanager_email_address": self.vars.certmanager_email_address,
             "expose_kubeapi": self.vars.expose_kubeapi,
-            "k3s_tls_san_public": "", #TODO: add this
+            "k3s_tls_san_public": self.vars.k3s_tls_san_public,
             "k3s_url": self.vars.k3s_url,
             "k3s_tls_san": self.vars.k3s_url,
             "kubeconfig_secret_name": "" #TODO: add this
