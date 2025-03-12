@@ -1,22 +1,15 @@
 import os
 from constructs import Construct
 from aws_cdk import (
-    CfnCreationPolicy,
-    CfnResourceSignal,
-    Duration,
     Stack,
     aws_iam as iam,
-    aws_sqs as sqs,
-    aws_sns as sns,
     aws_ec2 as ec2,
-    aws_sns_subscriptions as subs,
     CfnOutput,
     RemovalPolicy,
     Tags,
 )
 from jinja2 import Environment, PackageLoader, select_autoescape
 from src.variables import Variables
-
 
 class K3sStack(Stack):
 
@@ -51,6 +44,12 @@ class K3sStack(Stack):
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(80),
             description="Allow http access from the world"
+        )
+
+        # for the kubernetes nodes
+        sg.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp_range(30000, 32767),
         )
 
         if vars.key_pair_name:
