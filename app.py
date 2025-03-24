@@ -2,7 +2,7 @@
 
 import aws_cdk as cdk
 
-from src.k3s_instance import K3sInstance
+from src.ec2_instance.k3s_instance import K3sInstance
 from src.variables import Variables
 from dotenv import load_dotenv
 
