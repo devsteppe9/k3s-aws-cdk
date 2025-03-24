@@ -173,7 +173,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-
 # VS Code
 .vscode/*
 !.vscode/settings.json
@@ -187,7 +186,6 @@ cython_debug/
 
 # Built Visual Studio Code Extensions
 *.vsix
-
 
 *.swp
 package-lock.json
@@ -211,3 +209,4 @@ venv.bak/
 # CDK Context & Staging files
 .cdk.staging/
 cdk.out/
+cdk.context.json

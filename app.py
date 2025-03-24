@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 
-import os
 import aws_cdk as cdk
 
-from src.k3s_stack import K3sStack
+from src.k3s_instance import K3sInstance
 from src.variables import Variables
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=".env")
-
-
 
 app = cdk.App()
-aws_account = os.getenv("AWS_ACCOUNT")
-aws_region = os.getenv("AWS_REGION")
-env = cdk.Environment(account=aws_account, region=aws_region)
-K3sStack(app, "K3sStack", env=env, vars=Variables())
+load_dotenv(dotenv_path="config/.env")
+vars = Variables()
+
+K3sInstance(
+    app,
+    vars.common_prefix + "-master-instance-" + vars.environment,
+    env=cdk.Environment(
+        account=vars.AWS_ACCOUNT,
+        region=vars.AWS_REGION
+    ), 
+    vars=vars
+)
 
 app.synth()
