@@ -1,4 +1,3 @@
-import os
 from constructs import Construct
 from aws_cdk import (
     Stack,
@@ -27,7 +26,6 @@ class K3sStack(Stack):
         # find default VPC
         vpc = ec2.Vpc.from_lookup(self, "VPC", is_default=True)
 
-        # create security group
         sg = ec2.SecurityGroup(
             self, vars.common_prefix + "-master-sg-" + vars.environment,
             vpc=vpc,
@@ -46,11 +44,24 @@ class K3sStack(Stack):
             description="Allow http access from the world"
         )
 
-        # for the kubernetes nodes
         sg.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
-            connection=ec2.Port.tcp_range(30000, 32767),
+            connection=ec2.Port.tcp(443),
+            description="Allow https access from the world"
         )
+
+        if vars.expose_nodeports:
+            sg.add_ingress_rule(
+                peer=ec2.Peer.any_ipv4(),
+                connection=ec2.Port.tcp_range(30000, 32767),
+            )
+
+        if vars.expose_kubeapi:
+            sg.add_ingress_rule(
+                peer=ec2.Peer.any_ipv4(),
+                connection=ec2.Port.tcp(6443),
+                description="Allow kubernetes API access from the world. This is not recommended for production."
+            )
 
         if vars.key_pair_name:
             key = ec2.KeyPair.from_key_pair_name(
@@ -77,7 +88,8 @@ class K3sStack(Stack):
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ReadOnlyAccess"),
-                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore")
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"),
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ContainerRegistryPullOnly"),
             ]
         )
 
@@ -90,7 +102,7 @@ class K3sStack(Stack):
         instance = ec2.Instance(
             self, instance_name,
             instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+                ec2.InstanceClass.T2, ec2.InstanceSize.SMALL),
             machine_image=ec2.MachineImage.latest_amazon_linux2023(),
             vpc=vpc,
             security_group=sg,
@@ -119,7 +131,7 @@ class K3sStack(Stack):
     
     def get_rendered_script(self) -> str:
         jinja_env = Environment(
-            loader=PackageLoader('k3s_cluster', 'bash_scripts'),
+            loader=PackageLoader('scripts', '.'),
             autoescape=select_autoescape("sh"),
             variable_start_string='{{',
             variable_end_string='}}'
@@ -128,31 +140,13 @@ class K3sStack(Stack):
         variables = {
             "k3s_version": self.vars.k3s_version,
             "k3s_token": self.vars.k3s_token,
-            "k3s_subnet": self.vars.k3s_subnet,
             "is_k3s_server": True,
-            "install_node_termination_handler": self.vars.install_node_termination_handler,
-            "node_termination_handler_release": self.vars.node_termination_handler_release,
             "install_nginx_ingress": self.vars.install_nginx_ingress,
             "nginx_ingress_release": self.vars.nginx_ingress_release,
-            "install_certmanager": self.vars.install_certmanager,
-            "efs_persistent_storage": self.vars.efs_persistent_storage,
-            "efs_csi_driver_release": self.vars.efs_csi_driver_release,
-            "efs_filesystem_id": self.vars.efs_persistent_storage,
-            "certmanager_release": self.vars.certmanager_release,
-            "certmanager_email_address": self.vars.certmanager_email_address,
             "expose_kubeapi": self.vars.expose_kubeapi,
-            "k3s_tls_san_public": self.vars.k3s_tls_san_public,
-            "k3s_url": self.vars.k3s_url,
-            "k3s_tls_san": self.vars.k3s_url,
-            "kubeconfig_secret_name": "" #TODO: add this
         }
 
-        # FIXME: bash file is not formatted correctly to render with jinja
         self.master_install_template = jinja_env.get_template('k3s-master-install.sh')
         scripts = self.master_install_template.render(variables)
 
-        # self.master_install_template = jinja_env.get_template('demo_setup.sh')
-        # scripts = self.master_install_template.render({'contents_for_web': 'Hello, World from Jinja!'})
-
-        # print(scripts)
         return scripts

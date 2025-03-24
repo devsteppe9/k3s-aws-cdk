@@ -26,8 +26,6 @@ check_os() {
 
 check_os
 AWS_IMDS_TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-echo "HERE IS THE TOKEN: "
-echo $AWS_IMDS_TOKEN
 
 if [[ "$operating_system" == "ubuntu" ]]; then
   apt-get update
@@ -50,7 +48,8 @@ k3s_install_params+=("--disable traefik")
 {% endif %}
 
 {% if expose_kubeapi %}
-k3s_install_params+=("--tls-san {{ k3s_tls_san_public }}")
+provider_public_ip="$(curl -s -H "X-aws-ec2-metadata-token: $AWS_IMDS_TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)"
+k3s_install_params+=("--tls-san ${provider_public_ip}")
 {% endif %}
 
 INSTALL_PARAMS="${k3s_install_params[*]}"
@@ -73,27 +72,17 @@ until kubectl get pods -A | grep 'Running'; do
   sleep 5
 done
 
-{% if install_node_termination_handler %}
-#Install node termination handler
-echo 'Install node termination handler'
-kubectl apply -f https://github.com/aws/aws-node-termination-handler/releases/download/{{ node_termination_handler_release }}/all-resources.yaml
-{% endif %}
-
-{% if install_nginx_ingress %}
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-{{ nginx_ingress_release }}/deploy/static/provider/cloud/deploy.yaml
-{% endif %}
-
-# Install kubectl alias
+# Configure kubectl alias
 echo 'alias k=kubectl' >>~/.bashrc
 source ~/.bashrc
 
+{% if install_nginx_ingress %}
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-{{ nginx_ingress_release }}/deploy/static/provider/cloud/deploy.yaml
+
+kubectl create deployment demo --image=httpd --port=80
 # Create demo nginx deployment
 until kubectl get pods --namespace=ingress-nginx | grep 'Running'; do
   echo 'Waiting for nginx ingress controller to start'
   sleep 5
 done
-
-kubectl create deployment demo --image=httpd --port=80
-kubectl expose deployment demo
-sleep 5
-kubectl create ingress demo-localhost --class=nginx --rule="/*=demo:80"
+{% endif %}
