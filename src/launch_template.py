@@ -10,10 +10,11 @@ from aws_cdk import (
 from src.ec2_instance.security_groups import create_security_group
 from src.ec2_instance.instance_role import create_instance_role
 from src.ec2_instance.key_pair import create_key_pair
+from src.variables import Variables
 
 class LaunchTemplate(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str,vars: Variables, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # find default VPC
@@ -44,8 +45,6 @@ class LaunchTemplate(Stack):
             associate_public_ip_address=True,
             security_group=sg,
             require_imdsv2=True,
-            vpc=vpc,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
         )
 
         Tags.of(launch_template).add("k3s-instance-type", "k3s-master")

@@ -3,6 +3,7 @@
 import aws_cdk as cdk
 
 from src.ec2_instance.k3s_instance import K3sInstance
+from src.launch_template import LaunchTemplate
 from src.variables import Variables
 from dotenv import load_dotenv
 from aws_cdk import Tags
@@ -18,6 +19,16 @@ K3sInstance(
         account=vars.AWS_ACCOUNT,
         region=vars.AWS_REGION
     ), 
+    vars=vars
+)
+
+LaunchTemplate(
+    app,
+    vars.common_prefix + "-launch-template-" + vars.environment,
+    env=cdk.Environment(
+        account=vars.AWS_ACCOUNT,
+        region=vars.AWS_REGION
+    ),
     vars=vars
 )
 
