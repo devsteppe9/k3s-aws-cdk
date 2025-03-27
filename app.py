@@ -5,6 +5,7 @@ import aws_cdk as cdk
 from src.ec2_instance.k3s_instance import K3sInstance
 from src.variables import Variables
 from dotenv import load_dotenv
+from aws_cdk import Tags
 
 app = cdk.App()
 load_dotenv(dotenv_path="config/.env")
@@ -19,5 +20,12 @@ K3sInstance(
     ), 
     vars=vars
 )
+
+# APPLY COMMON TAGS TO ALL RESOURCES
+Tags.of(app).add("environment", "dev")
+Tags.of(app).add("provisioner", "cdk")
+Tags.of(app).add("cdk_module", "")
+Tags.of(app).add("k3s_cluster_name", "k3s-cluster") 
+Tags.of(app).add("application", "k3s")
 
 app.synth()
