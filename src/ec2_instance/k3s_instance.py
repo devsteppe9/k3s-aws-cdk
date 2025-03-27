@@ -6,10 +6,10 @@ from aws_cdk import (
     Tags,
 )
 from src.variables import Variables
-from src.security_groups import create_security_group
-from src.key_pair import create_key_pair
-from src.instance_role import create_instance_role
-from src.user_data import create_user_data
+from src.ec2_instance.security_groups import create_security_group
+from src.ec2_instance.key_pair import create_key_pair
+from src.ec2_instance.instance_role import create_instance_role
+from src.ec2_instance.user_data import create_user_data
 
 class K3sInstance(Stack):
 
