@@ -4,6 +4,7 @@ import aws_cdk as cdk
 
 from src.ec2_instance.k3s_instance import K3sInstance
 from src.launch_template import LaunchTemplate
+from src.asg import AutoScalingGroup
 from src.variables import Variables
 from dotenv import load_dotenv
 from aws_cdk import Tags
@@ -32,11 +33,21 @@ LaunchTemplate(
     vars=vars
 )
 
+AutoScalingGroup(
+    app,
+    vars.common_prefix + "-asg-" + vars.environment,
+    env=cdk.Environment(
+        account=vars.AWS_ACCOUNT,
+        region=vars.AWS_REGION
+    ),
+    vars=vars
+)
+
 # APPLY COMMON TAGS TO ALL RESOURCES
 Tags.of(app).add("environment", "dev")
 Tags.of(app).add("provisioner", "cdk")
-Tags.of(app).add("cdk_module", "")
-Tags.of(app).add("k3s_cluster_name", "k3s-cluster") 
+Tags.of(app).add("cdk_module", "https://github.com/devsteppe9/k3s-aws-cdk")
+Tags.of(app).add("k3s_cluster_name", vars.common_prefix) 
 Tags.of(app).add("application", "k3s")
 
 app.synth()

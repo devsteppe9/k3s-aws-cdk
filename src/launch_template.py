@@ -6,11 +6,13 @@ from aws_cdk import (
     Stack,
     aws_ec2 as ec2,
     Tags,
+    CfnOutput
 )
 from src.ec2_instance.security_groups import create_security_group
 from src.ec2_instance.instance_role import create_instance_role
 from src.ec2_instance.key_pair import create_key_pair
 from src.variables import Variables
+from src.ec2_instance.user_data import create_user_data
 
 class LaunchTemplate(Stack):
 
@@ -22,6 +24,7 @@ class LaunchTemplate(Stack):
         sg = create_security_group(self, vpc, vars)
         ec2_instance_profile = create_instance_role(self, vars)
         key = create_key_pair(self, vars)
+        user_data = create_user_data(self, vars, '')
 
         template_name = vars.common_prefix + "-launch-template-" + vars.environment
 
@@ -45,6 +48,13 @@ class LaunchTemplate(Stack):
             associate_public_ip_address=True,
             security_group=sg,
             require_imdsv2=True,
+            user_data=user_data
         )
 
         Tags.of(launch_template).add("k3s-instance-type", "k3s-master")
+
+        CfnOutput(
+            self, vars.common_prefix + "-launch-template-id-" + vars.environment,
+            value=launch_template.launch_template_id,
+            description="Launch Template Id"
+        )
