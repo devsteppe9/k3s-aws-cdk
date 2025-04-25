@@ -76,6 +76,10 @@ After deploying the stack, you will have a k3s cluster running on an EC2 instanc
 
 ## Contributing
 
+### TODO
+- [ ] Create EC2 Autoscaling
+- [ ] Attach new worker nodes from ASG to the existing master node
+
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
